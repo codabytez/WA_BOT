@@ -26,7 +26,7 @@ class SessionManager {
         cac_number: "",
         referral: "",
         loan_amount: "",
-        state_id: "",
+        address: "",
         industry: "",
         twitter: "",
         instagram: "",
@@ -81,36 +81,6 @@ class SessionManager {
       timestamp: Date.now(),
       attempts: 0,
     });
-  }
-
-  // Verify OTP
-  verifyOTP(email, otp) {
-    const stored = this.otpStorage.get(email);
-    if (!stored) return false;
-
-    // Check if OTP is expired (10 minutes)
-    const isExpired = Date.now() - stored.timestamp > 10 * 60 * 1000;
-    if (isExpired) {
-      this.otpStorage.delete(email);
-      return false;
-    }
-
-    // Increment attempts
-    stored.attempts++;
-
-    // Check if too many attempts (max 5)
-    if (stored.attempts > 5) {
-      this.otpStorage.delete(email);
-      return false;
-    }
-
-    // Verify OTP
-    if (stored.otp === otp) {
-      this.otpStorage.delete(email);
-      return true;
-    }
-
-    return false;
   }
 
   // Clear all sessions (admin function)

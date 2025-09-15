@@ -24,14 +24,24 @@ class WebhookHandler {
 
         // Handle different message types
         let messageText = "";
+        let messageType = "text";
+
         if (message.type === "text") {
           messageText = message.text.body;
+          messageType = "text";
+        } else if (message.type === "interactive") {
+          // Handle interactive responses (button clicks, list selections)
+          messageText = message.interactive;
+          messageType = "interactive";
         } else if (message.type === "video") {
           messageText = "video_uploaded";
+          messageType = "media";
         } else if (message.type === "document") {
           messageText = "document_uploaded";
+          messageType = "media";
         } else {
-          messageText = message.type; // Handle other types
+          messageText = message.type;
+          messageType = "other";
         }
 
         try {
@@ -39,11 +49,18 @@ class WebhookHandler {
             from,
             messageText,
             username,
-            whatsappPhoneNumber
+            whatsappPhoneNumber,
+            messageType
           );
         } catch (error) {
           console.error("Error processing user input:", error);
-          // You could add error handling here to send error message to user
+          // Send error message to user
+          const WhatsAppService = require("../services/whatsappService");
+          const whatsappService = new WhatsAppService();
+          await whatsappService.sendMessage(
+            from,
+            "Sorry, I encountered an error processing your request. Please try again or contact support."
+          );
         }
       }
       res.sendStatus(200);

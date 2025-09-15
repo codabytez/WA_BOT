@@ -141,7 +141,7 @@ class ConversationHandler {
         await this.handleLoanAmountState(from, message, userSession);
         break;
 
-      case USER_STATES.AWAITING_STATE:
+      case USER_STATES.AWAITING_ADDRESS:
         await this.handleStateLocationState(from, message, userSession);
         break;
 
@@ -365,14 +365,14 @@ class ConversationHandler {
     userSession.data.loan_amount = message;
     await this.whatsappService.sendMessage(
       from,
-      "Which state is your business located in? (e.g., Lagos, Abuja, Kano):"
+      "Where is your business located? Please enter your business address:"
     );
-    userSession.state = USER_STATES.AWAITING_STATE;
+    userSession.state = USER_STATES.AWAITING_ADDRESS;
     this.sessionManager.updateSession(from, userSession);
   }
 
   async handleStateLocationState(from, message, userSession) {
-    userSession.data.state_id = message;
+    userSession.data.address = message;
     await this.whatsappService.sendMessage(
       from,
       "What industry is your business in? (e.g., Technology, Agriculture, Retail):"
@@ -429,25 +429,27 @@ class ConversationHandler {
       "⏳ Submitting your application details, please wait..."
     );
 
-    try {
-      const response = await this.apiService.submitEntry(userSession.data);
+    await this.whatsappService.sendPaymentDetails(from, userSession);
 
-      if (response?.status) {
-        await this.whatsappService.sendPaymentDetails(from, userSession);
-        userSession.state = USER_STATES.AWAITING_PAYMENT;
-        this.sessionManager.updateSession(from, userSession);
-      } else {
-        const errorMsg =
-          response?.message ||
-          "❌ Could not submit your application. Please try again later.";
-        await this.whatsappService.sendMessage(from, errorMsg);
-      }
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message ||
-        "❌ Something went wrong while submitting. Please try again.";
-      await this.whatsappService.sendMessage(from, errorMsg);
-    }
+    // try {
+    //   const response = await this.apiService.submitEntry(userSession.data);
+
+    //   if (response?.status) {
+    //     await this.whatsappService.sendPaymentDetails(from, userSession);
+    //     userSession.state = USER_STATES.AWAITING_PAYMENT;
+    //     this.sessionManager.updateSession(from, userSession);
+    //   } else {
+    //     const errorMsg =
+    //       response?.message ||
+    //       "❌ Could not submit your application. Please try again later.";
+    //     await this.whatsappService.sendMessage(from, errorMsg);
+    //   }
+    // } catch (error) {
+    //   const errorMsg =
+    //     error.response?.data?.message ||
+    //     "❌ Something went wrong while submitting. Please try again.";
+    //   await this.whatsappService.sendMessage(from, errorMsg);
+    // }
   }
 
   async handlePaymentState(from, message, userSession) {

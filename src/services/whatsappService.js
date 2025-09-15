@@ -96,7 +96,7 @@ class WhatsAppService {
       `Business: ${userSession.data.business_name}\n` +
       `Duration: ${userSession.data.business_duration}\n` +
       `Loan Amount: ${userSession.data.loan_amount}\n` +
-      `State: ${userSession.data.state_id}\n` +
+      `Address: ${userSession.data.address}\n` +
       `Industry: ${userSession.data.industry}\n\n` +
       `💳 To proceed with your application, please make a payment of ₦${config.payment.amount}.\n\n` +
       `Payment Details:\n` +
@@ -118,6 +118,34 @@ class WhatsAppService {
       "Thank you for choosing us! 🙏";
 
     return this.sendMessage(to, message);
+  }
+
+  // Send interactive message (buttons/lists)
+  async sendInteractiveMessage(to, interactiveMessage) {
+    try {
+      const data = {
+        ...interactiveMessage,
+        to,
+      };
+
+      const response = await axios({
+        method: "POST",
+        url: `https://graph.facebook.com/${this.version}/${this.phoneNumberId}/messages`,
+        data,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Error sending interactive WhatsApp message:",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
   }
 }
 

@@ -15,14 +15,8 @@ function isValidName(name) {
   return name && name.trim().length >= 2;
 }
 
-// Generate OTP
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
 module.exports = {
   isValidEmail,
   isValidPhone,
   isValidName,
-  generateOTP,
 };
