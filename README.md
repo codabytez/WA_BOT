@@ -44,39 +44,40 @@ kiya-whatsapp-bot/
 
 1. **Clone the repository**
 
-```bash
-git clone <your-repo-url>
-cd kiya-whatsapp-bot
-```
+   ```bash
+   git clone <your-repo-url>
+   cd kiya-whatsapp-bot
+   ```
 
 1. **Install dependencies**
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
 1. **Environment Setup**
+
    - Copy the `.env` file and update with your actual values:
 
-```bash
-cp .env .env.local
-```
+   ```bash
+   cp .env .env.local
+   ```
 
-- Update the following variables in `.env`:
-  - `WHATSAPP_TOKEN`: Your WhatsApp Business API token
-  - `VERIFY_TOKEN`: Your webhook verification token
-  - `PHONE_NUMBER_ID`: Your WhatsApp phone number ID
-  - `BACKEND_API_URL`: Your backend API URL
+   - Update the following variables in `.env`:
+     - `WHATSAPP_TOKEN`: Your WhatsApp Business API token
+     - `VERIFY_TOKEN`: Your webhook verification token
+     - `PHONE_NUMBER_ID`: Your WhatsApp phone number ID
+     - `BACKEND_API_URL`: Your backend API URL
 
 1. **Start the server**
 
-```bash
-# Development
-npm run dev
+   ```bash
+   # Development
+   npm run dev
 
-# Production
-npm start
-```
+   # Production
+   npm start
+   ```
 
 ## 🔧 Configuration
 
