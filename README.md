@@ -15,7 +15,7 @@ A WhatsApp chatbot for processing loan applications with email verification, dat
 
 ## 📁 Project Structure
 
-```
+```JS
 kiya-whatsapp-bot/
 ├── src/
 │   ├── config/
@@ -49,13 +49,13 @@ git clone <your-repo-url>
 cd kiya-whatsapp-bot
 ```
 
-2. **Install dependencies**
+1. **Install dependencies**
 
 ```bash
 npm install
 ```
 
-3. **Environment Setup**
+1. **Environment Setup**
    - Copy the `.env` file and update with your actual values:
 
 ```bash
@@ -68,7 +68,7 @@ cp .env .env.local
   - `PHONE_NUMBER_ID`: Your WhatsApp phone number ID
   - `BACKEND_API_URL`: Your backend API URL
 
-4. **Start the server**
+1. **Start the server**
 
 ```bash
 # Development
@@ -82,19 +82,19 @@ npm start
 
 ### Environment Variables
 
-| Variable               | Description                | Example                               |
-| ---------------------- | -------------------------- | ------------------------------------- |
-| `PORT`                 | Server port                | `8000`                                |
-| `WHATSAPP_VERSION`     | WhatsApp API version       | `v22.0`                               |
-| `VERIFY_TOKEN`         | Webhook verification token | `your-verify-token`                   |
-| `PHONE_NUMBER_ID`      | WhatsApp phone number ID   | `1234567890`                          |
-| `WHATSAPP_TOKEN`       | WhatsApp access token      | `EAA...`                              |
-| `BACKEND_API_URL`      | Backend API base URL       | `https://backend.kiya.ng/api/v1/kiya` |
-| `PAYMENT_AMOUNT`       | Payment amount             | `1000`                                |
-| `PAYMENT_BANK`         | Payment bank name          | `ALAT By Wema`                        |
-| `PAYMENT_ACCOUNT`      | Payment account number     | `0000000000`                          |
-| `PAYMENT_ACCOUNT_NAME` | Payment account name       | `Lisan al Gaib`                       |
-| `SUPPORT_EMAIL`        | Support email              | `helpdesk@kiakia.co`                  |
+| Variable               | Description                |
+| ---------------------- | -------------------------- |
+| `PORT`                 | Server port                |
+| `WHATSAPP_VERSION`     | WhatsApp API version       |
+| `VERIFY_TOKEN`         | Webhook verification token |
+| `PHONE_NUMBER_ID`      | WhatsApp phone number ID   |
+| `WHATSAPP_TOKEN`       | WhatsApp access token      |
+| `BACKEND_API_URL`      | Backend API base URL       |
+| `PAYMENT_AMOUNT`       | Payment amount             |
+| `PAYMENT_BANK`         | Payment bank name          |
+| `PAYMENT_ACCOUNT`      | Payment account number     |
+| `PAYMENT_ACCOUNT_NAME` | Payment account name       |
+| `SUPPORT_EMAIL`        | Support email              |
 
 ### WhatsApp Business API Setup
 
@@ -115,41 +115,6 @@ Users can interact with the bot using these commands:
 - `status` - Check application progress
 
 ## 🎯 Interactive Features
-
-### Dropdown/List Selections
-
-The bot now uses WhatsApp's interactive features for better user experience:
-
-**Business Duration**: Buttons for common durations
-
-- Less than 6 months
-- 6 months - 1 year
-- 1 - 2 years
-- (+ "other" for more options)
-
-**State Selection**: Popular states as buttons + full list option
-
-- Lagos, FCT (Abuja), Kano, Rivers as quick buttons
-- "Other" option shows complete list of 37 states
-
-**Loan Amount**: Dropdown list with predefined ranges
-
-- ₦50,000 - ₦100,000
-- ₦100,000 - ₦250,000
-- ₦250,000 - ₦500,000
-- Up to ₦5,000,000+
-
-**Industry Selection**: Dropdown with 17+ industry categories
-
-- Agriculture, Technology, Retail, Manufacturing
-- Healthcare, Finance, Construction, etc.
-
-### Smart Fallbacks
-
-- If interactive messages fail, automatically switches to text lists
-- Accepts both button selections and typed responses
-- Fuzzy matching for state names (e.g., "lagos", "Lagos", "LAGOS" all work)
-- Number-based selection (e.g., "1" for first option)
 
 ## 🔄 Enhanced Conversation Flow
 
@@ -232,7 +197,7 @@ Then update your webhook URL in Meta Developer Console to the ngrok URL.
 
 ### Prerequisites
 
-- Node.js 16+
+- Node.js 20+
 - Environment variables configured
 - WhatsApp Business API setup
 - Backend API running
@@ -245,13 +210,13 @@ Then update your webhook URL in Meta Developer Console to the ngrok URL.
 4. Start the application: `npm start`
 5. Configure webhook URL in Meta Developer Console
 
-### Production Considerations
+<!-- ### Production Considerations
 
 - Use a process manager like PM2
 - Set up proper logging
 - Use Redis for session storage in production
 - Implement proper security headers
-- Set up SSL/HTTPS
+- Set up SSL/HTTPS -->
 
 ## 📝 Logging
 
@@ -276,7 +241,7 @@ The application includes comprehensive logging:
 
 ## 🆘 Support
 
-For support, email helpdesk@kiakia.co or create an issue in the repository.
+For support, email <helpdesk@kiakia.co> or create an issue in the repository.
 
 ## 🔗 Related Links
 
