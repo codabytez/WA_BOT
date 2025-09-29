@@ -4,6 +4,17 @@ const {
   isValidPhone,
   isValidName,
 } = require("../utils/validators");
+const {
+  createIndustrySelectionMessage,
+  createBusinessDurationSelectionMessage,
+  createLoanAmountSelectionMessage,
+  getIndustryDisplayName,
+  getBusinessDurationDisplayName,
+  getLoanAmountDisplayName,
+  isValidIndustryId,
+  isValidBusinessDurationId,
+  isValidLoanAmountId,
+} = require("../utils/interactiveMessages");
 const WhatsAppService = require("../services/whatsappService");
 const ApiService = require("../services/apiService");
 
@@ -15,12 +26,25 @@ class ConversationHandler {
   }
 
   // Main method to process user input
-  async processUserInput(from, message, username, whatsappPhoneNumber) {
+  async processUserInput(
+    from,
+    message,
+    username,
+    whatsappPhoneNumber,
+    messageType = "text",
+    interactiveData = null
+  ) {
     const userSession = this.sessionManager.getOrCreateSession(
       from,
       whatsappPhoneNumber
     );
     const currentMessage = message.toLowerCase().trim();
+
+    // Handle interactive responses
+    if (messageType === "interactive" && interactiveData) {
+      await this.handleInteractiveResponse(from, interactiveData, userSession);
+      return;
+    }
 
     // Handle global commands
     if (
@@ -36,6 +60,59 @@ class ConversationHandler {
 
     // Process based on current state
     await this.handleStateBasedInput(from, message, userSession, username);
+  }
+
+  // Handle interactive responses (button/list selections)
+  async handleInteractiveResponse(from, interactiveData, userSession) {
+    const selectedId = interactiveData.id;
+
+    switch (userSession.state) {
+      case USER_STATES.AWAITING_BUSINESS_DURATION:
+        if (isValidBusinessDurationId(selectedId)) {
+          userSession.data.business_duration =
+            getBusinessDurationDisplayName(selectedId);
+          await this.whatsappService.sendMessage(
+            from,
+            "What's your CAC registration number? (Type 'skip' if not registered yet):"
+          );
+          userSession.state = USER_STATES.AWAITING_CAC_NUMBER;
+          this.sessionManager.updateSession(from, userSession);
+        }
+        break;
+
+      case USER_STATES.AWAITING_LOAN_AMOUNT:
+        if (isValidLoanAmountId(selectedId)) {
+          userSession.data.loan_amount = getLoanAmountDisplayName(selectedId);
+          await this.whatsappService.sendMessage(
+            from,
+            "What is your business address? (Street, City, State)"
+          );
+          userSession.state = USER_STATES.AWAITING_BUSINESS_ADDRESS;
+          this.sessionManager.updateSession(from, userSession);
+        }
+        break;
+
+      case USER_STATES.AWAITING_INDUSTRY:
+        if (isValidIndustryId(selectedId)) {
+          userSession.data.industry = getIndustryDisplayName(selectedId);
+          await this.whatsappService.sendMessage(
+            from,
+            "📱 Please share your social media handles (optional):\n\n" +
+              "Format: Twitter: @handle, Instagram: @handle, Facebook: profile, LinkedIn: profile\n\n" +
+              "Or type 'skip' to continue:"
+          );
+          userSession.state = USER_STATES.AWAITING_SOCIAL_MEDIA;
+          this.sessionManager.updateSession(from, userSession);
+        }
+        break;
+
+      default:
+        // If we receive an interactive response in an unexpected state, ignore it
+        await this.whatsappService.sendMessage(
+          from,
+          "I didn't expect that selection right now. Please continue with your application."
+        );
+    }
   }
 
   // Handle global commands (cancel, help, status, etc.)
@@ -141,7 +218,7 @@ class ConversationHandler {
         await this.handleLoanAmountState(from, message, userSession);
         break;
 
-      case USER_STATES.AWAITING_ADDRESS:
+      case USER_STATES.AWAITING_BUSINESS_ADDRESS:
         await this.handleStateLocationState(from, message, userSession);
         break;
 
@@ -332,65 +409,60 @@ class ConversationHandler {
     }
 
     userSession.data.business_name = message;
-    await this.whatsappService.sendMessage(
-      from,
-      "How long has your business been operating? (e.g., '2 years', '6 months'):"
-    );
+
+    // Send interactive message for business duration selection
+    const interactiveMessage = createBusinessDurationSelectionMessage(from);
+    await this.whatsappService.sendInteractiveMessage(from, interactiveMessage);
+
     userSession.state = USER_STATES.AWAITING_BUSINESS_DURATION;
     this.sessionManager.updateSession(from, userSession);
   }
 
   async handleBusinessDurationState(from, message, userSession) {
-    userSession.data.business_duration = message;
-    await this.whatsappService.sendMessage(
-      from,
-      "What's your CAC registration number? (Type 'skip' if not registered yet):"
-    );
-    userSession.state = USER_STATES.AWAITING_CAC_NUMBER;
-    this.sessionManager.updateSession(from, userSession);
+    // Send interactive message for business duration selection
+    const interactiveMessage = createBusinessDurationSelectionMessage(from);
+    await this.whatsappService.sendInteractiveMessage(from, interactiveMessage);
+
+    // Don't change state yet - wait for interactive response
   }
 
   async handleCACNumberState(from, message, userSession) {
     userSession.data.cac_number =
       message.toLowerCase() === "skip" ? "" : message;
-    await this.whatsappService.sendMessage(
-      from,
-      "How much loan amount are you applying for? (e.g., ₦500,000):"
-    );
+
+    // Send interactive message for loan amount selection
+    const interactiveMessage = createLoanAmountSelectionMessage(from);
+    await this.whatsappService.sendInteractiveMessage(from, interactiveMessage);
+
     userSession.state = USER_STATES.AWAITING_LOAN_AMOUNT;
     this.sessionManager.updateSession(from, userSession);
   }
 
   async handleLoanAmountState(from, message, userSession) {
-    userSession.data.loan_amount = message;
-    await this.whatsappService.sendMessage(
-      from,
-      "Where is your business located? Please enter your business address:"
-    );
-    userSession.state = USER_STATES.AWAITING_ADDRESS;
-    this.sessionManager.updateSession(from, userSession);
+    // Send interactive message for loan amount selection
+    const interactiveMessage = createLoanAmountSelectionMessage(from);
+    await this.whatsappService.sendInteractiveMessage(from, interactiveMessage);
+
+    // Don't change state yet - wait for interactive response
   }
 
   async handleStateLocationState(from, message, userSession) {
-    userSession.data.address = message;
-    await this.whatsappService.sendMessage(
-      from,
-      "What industry is your business in? (e.g., Technology, Agriculture, Retail):"
-    );
+    userSession.data.business_address = message;
+
+    // Send interactive message for industry selection
+    const interactiveMessage = createIndustrySelectionMessage(from);
+    await this.whatsappService.sendInteractiveMessage(from, interactiveMessage);
+
     userSession.state = USER_STATES.AWAITING_INDUSTRY;
     this.sessionManager.updateSession(from, userSession);
   }
 
   async handleIndustryState(from, message, userSession) {
-    userSession.data.industry = message;
-    await this.whatsappService.sendMessage(
-      from,
-      "📱 Please share your social media handles (optional):\n\n" +
-        "Format: Twitter: @handle, Instagram: @handle, Facebook: profile, LinkedIn: profile\n\n" +
-        "Or type 'skip' to continue:"
-    );
-    userSession.state = USER_STATES.AWAITING_SOCIAL_MEDIA;
-    this.sessionManager.updateSession(from, userSession);
+    // Send interactive message for industry selection
+    const interactiveMessage = createIndustrySelectionMessage(from);
+    await this.whatsappService.sendInteractiveMessage(from, interactiveMessage);
+
+    // Don't change state yet - wait for interactive response
   }
 
   async handleSocialMediaState(from, message, userSession) {
@@ -429,55 +501,174 @@ class ConversationHandler {
       "⏳ Submitting your application details, please wait..."
     );
 
-    await this.whatsappService.sendPaymentDetails(from, userSession);
+    try {
+      // Submit entry to backend
+      const response = await this.apiService.submitEntry(userSession.data);
 
-    // try {
-    //   const response = await this.apiService.submitEntry(userSession.data);
+      if (response.data?.status) {
+        // Get payment link
+        try {
+          const paymentResponse = await this.apiService.getPaymentLink(
+            userSession.data.email
+          );
 
-    //   if (response?.status) {
-    //     await this.whatsappService.sendPaymentDetails(from, userSession);
-    //     userSession.state = USER_STATES.AWAITING_PAYMENT;
-    //     this.sessionManager.updateSession(from, userSession);
-    //   } else {
-    //     const errorMsg =
-    //       response?.message ||
-    //       "❌ Could not submit your application. Please try again later.";
-    //     await this.whatsappService.sendMessage(from, errorMsg);
-    //   }
-    // } catch (error) {
-    //   const errorMsg =
-    //     error.response?.data?.message ||
-    //     "❌ Something went wrong while submitting. Please try again.";
-    //   await this.whatsappService.sendMessage(from, errorMsg);
-    // }
+          console.log("Payment link response:", paymentResponse);
+
+          //           {
+          //   "status": true,
+          //   "message": "Payment link initiated successfully",
+          //   "data": {
+          //     "payment_link": "https://checkout.paystack.com/6m2kesvqz0f6epg"
+          //   }
+          // }
+
+          if (paymentResponse?.status && paymentResponse?.data?.payment_link) {
+            // Send payment details with payment button
+            await this.whatsappService.sendPaymentDetails(
+              from,
+              userSession,
+              paymentResponse?.data?.payment_link
+            );
+          } else {
+            // Fallback to an error message
+            await this.whatsappService.sendMessage(
+              from,
+              "❌ Could not generate payment link. Please try again later or contact support."
+            );
+          }
+        } catch (paymentError) {
+          console.error("Payment link error:", paymentError);
+          // Fallback to an error message
+          await this.whatsappService.sendMessage(
+            from,
+            "❌ Could not generate payment link. Please try again later or contact support."
+          );
+        }
+
+        userSession.state = USER_STATES.AWAITING_PAYMENT;
+        this.sessionManager.updateSession(from, userSession);
+      } else {
+        if (response.status === 201) {
+          //Payment has already been made for this entry
+          await this.whatsappService.sendMessage(
+            from,
+            "✅ Your application has already been submitted and payment received! Please proceed to upload your pitch video.\n\n" +
+              "You can upload your pitch video by sending it directly here in this chat."
+          );
+          userSession.state = USER_STATES.AWAITING_PITCH_VIDEO;
+          this.sessionManager.updateSession(from, userSession);
+          return;
+        }
+        const errorMsg =
+          response?.message ||
+          "❌ Could not submit your application. Please try again later.";
+        await this.whatsappService.sendMessage(from, errorMsg);
+      }
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message ||
+        "❌ Something went wrong while submitting. Please try again.";
+      await this.whatsappService.sendMessage(from, errorMsg);
+    }
   }
 
   async handlePaymentState(from, message, userSession) {
-    userSession.data.payment_reference = message;
+    // Check if user is providing a transaction reference
+    if (message.length > 5) {
+      // Assume transaction references are longer than 5 characters
+      userSession.data.payment_reference = message;
 
+      await this.whatsappService.sendMessage(
+        from,
+        "✅ Payment reference received! We're verifying your payment...\n\n" +
+          "⏳ This may take a few moments. You'll be notified once payment is confirmed."
+      );
+
+      userSession.state = USER_STATES.PAYMENT_PENDING;
+      this.sessionManager.updateSession(from, userSession);
+
+      // Here you could add logic to verify payment with your payment processor
+      // For now, we'll simulate automatic confirmation after a short delay
+      setTimeout(async () => {
+        try {
+          await this.confirmPayment(from, userSession);
+        } catch (error) {
+          console.error("Error confirming payment:", error);
+        }
+      }, 3000); // 3 second delay to simulate processing
+    } else {
+      await this.whatsappService.sendMessage(
+        from,
+        "Please provide a valid transaction reference. It should be the reference number you received after making payment.\n\n" +
+          "If you haven't paid yet, please use the payment link provided earlier or make a bank transfer and send the reference number."
+      );
+    }
+  }
+
+  // Handle payment pending state
+  async handlePaymentPendingState(from, message, userSession) {
     await this.whatsappService.sendMessage(
       from,
-      "✅ Payment received! Thank you.\n\n" +
-        "🎥 Final step: Please upload your pitch video.\n\n" +
-        "Record a 1-2 minute video explaining:\n" +
-        "• Your business idea\n" +
-        "• How you'll use the loan\n" +
-        "• Why you should be selected\n\n" +
-        "Upload the video now:"
+      "⏳ Your payment is still being processed. Please wait for confirmation.\n\n" +
+        "If you have a new transaction reference, please provide it:"
     );
 
-    userSession.state = USER_STATES.AWAITING_PITCH_VIDEO;
-    this.sessionManager.updateSession(from, userSession);
+    // Allow them to provide a new reference
+    if (message.length > 5) {
+      userSession.data.payment_reference = message;
+      this.sessionManager.updateSession(from, userSession);
+      await this.whatsappService.sendMessage(
+        from,
+        "✅ New payment reference received! Verifying payment..."
+      );
+    }
   }
 
   async handlePitchVideoState(from, message, userSession) {
-    await this.whatsappService.sendCompletionMessage(from);
-    console.log("Complete application:", userSession.data);
+    if (message === "video_uploaded" || message === "document_uploaded") {
+      await this.whatsappService.sendMessage(
+        from,
+        "✅ Pitch video received! Thank you for your submission.\n\n" +
+          "Our team will review your application and get back to you soon.\n\n" +
+          "If you need any assistance, feel free to contact support at helpdesk@kiakia.co."
+      );
 
-    userSession.state = USER_STATES.COMPLETED;
-    this.sessionManager.updateSession(from, userSession);
+      userSession.state = USER_STATES.COMPLETED;
+      this.sessionManager.updateSession(from, userSession);
+    } else {
+      await this.whatsappService.sendMessage(
+        from,
+        "Please upload your pitch video by sending it directly here in this chat.\n\n" +
+          "If you need help, type 'help' for assistance."
+      );
+    }
   }
 
+  // Confirm payment (can be called from webhook or manual confirmation)
+  async confirmPayment(from, userSession) {
+    // Here you would typically verify the payment with your payment processor
+    // For this example, we'll assume the payment is valid if a reference exists
+
+    if (userSession.data.payment_reference) {
+      await this.whatsappService.sendMessage(
+        from,
+        "✅ Payment confirmed! Thank you for your payment.\n\n" +
+          "You can now upload your pitch video by sending it directly here in this chat."
+      );
+
+      userSession.state = USER_STATES.AWAITING_PITCH_VIDEO;
+      this.sessionManager.updateSession(from, userSession);
+    } else {
+      await this.whatsappService.sendMessage(
+        from,
+        "❌ No payment reference found. Please provide your transaction reference to confirm payment."
+      );
+      userSession.state = USER_STATES.AWAITING_PAYMENT;
+      this.sessionManager.updateSession(from, userSession);
+    }
+  }
+
+  // Handle completed state
   async handleCompletedState(from) {
     await this.whatsappService.sendMessage(
       from,

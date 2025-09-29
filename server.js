@@ -5,11 +5,14 @@ const config = require("./src/config");
 // Import services and handlers
 const SessionManager = require("./src/services/sessionManager");
 const WebhookHandler = require("./src/handlers/webhookHandler");
+const ConversationHandler = require("./src/handlers/conversionHandler");
 const createAdminRoutes = require("./src/routes/adminRoutes");
+const createPaymentRoutes = require("./src/routes/paymentRoutes");
 
 // Initialize services
 const sessionManager = new SessionManager();
 const webhookHandler = new WebhookHandler(sessionManager);
+const conversationHandler = new ConversationHandler(sessionManager);
 
 // Initialize Express app
 const app = express();
@@ -25,6 +28,9 @@ app.get("/", (req, res) => {
       webhook_get: "/webhook",
       webhook_post: "/webhook",
       admin: "/admin/*",
+      payment_webhook: "/payment/webhook",
+      payment_confirm: "/payment/confirm",
+      payment_status: "/payment/status/:phone",
     },
   });
 });
@@ -41,6 +47,9 @@ app.post("/webhook", async (req, res) => {
 
 // Admin routes
 app.use("/admin", createAdminRoutes(sessionManager));
+
+// Payment routes
+app.use("/payment", createPaymentRoutes(sessionManager, conversationHandler));
 
 // Health check endpoint
 app.get("/health", (req, res) => {

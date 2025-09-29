@@ -36,6 +36,29 @@ class WhatsAppService {
     }
   }
 
+  // Send interactive message
+  async sendInteractiveMessage(to, interactiveMessage) {
+    try {
+      const response = await axios({
+        method: "POST",
+        url: `https://graph.facebook.com/${this.version}/${this.phoneNumberId}/messages`,
+        data: interactiveMessage,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Error sending interactive message:",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  }
+
   // Send welcome message
   async sendWelcomeMessage(to, username) {
     const message =
@@ -86,27 +109,107 @@ class WhatsAppService {
     return this.sendMessage(to, message);
   }
 
-  // Send payment details
-  async sendPaymentDetails(to, userSession) {
+  // Send payment details with interactive button
+  async sendPaymentDetails(to, userSession, paymentLink) {
+    // Helper to format numbers with commas, handles string or number
+    function formatNumber(num) {
+      const n = typeof num === "string" ? Number(num.replace(/,/g, "")) : num;
+      return isNaN(n) ? num : n.toLocaleString("en-NG");
+    }
+
     const summary =
       `📋 Application Summary:\n\n` +
-      `Name: ${userSession.data.first_name} ${userSession.data.last_name}\n` +
-      `Email: ${userSession.data.email}\n` +
-      `Phone: ${userSession.data.phone}\n` +
-      `Business: ${userSession.data.business_name}\n` +
-      `Duration: ${userSession.data.business_duration}\n` +
-      `Loan Amount: ${userSession.data.loan_amount}\n` +
-      `Address: ${userSession.data.address}\n` +
-      `Industry: ${userSession.data.industry}\n\n` +
-      `💳 To proceed with your application, please make a payment of ₦${config.payment.amount}.\n\n` +
-      `Payment Details:\n` +
-      `Bank: ${config.payment.bank}\n` +
-      `Account: ${config.payment.account}\n` +
-      `Name: ${config.payment.accountName}\n\n` +
-      `After payment, please send your transaction reference:`;
+      `👤 Name: ${userSession.data.first_name} ${userSession.data.last_name}\n` +
+      `📧 Email: ${userSession.data.email}\n` +
+      `📱 Phone: ${userSession.data.phone}\n` +
+      `🏢 Business: ${userSession.data.business_name}\n` +
+      `📅 Duration: ${userSession.data.business_duration}\n` +
+      `💰 Loan Amount: ₦${formatNumber(userSession.data.loan_amount)}\n` +
+      `📍 Address: ${userSession.data.address}\n` +
+      `🏭 Industry: ${userSession.data.industry}\n\n` +
+      `💳 To proceed with your application, please make a payment of ₦${formatNumber(
+        config.payment.amount
+      )}.\n\n` +
+      `Click the button below to pay securely online, or send your transaction reference if you've already paid:`;
 
-    return this.sendMessage(to, summary);
+    // Create interactive message with payment button
+    const interactiveMessage = {
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "cta_url",
+        header: {
+          type: "text",
+          text: "💳 Payment Required",
+        },
+        body: {
+          text: summary,
+        },
+        footer: {
+          text: "Secure payment powered by Kiya",
+        },
+        action: {
+          name: "cta_url",
+          parameters: {
+            display_text: "Pay Now",
+            url: paymentLink,
+          },
+        },
+      },
+    };
+
+    return this.sendInteractiveMessage(to, interactiveMessage);
   }
+
+  // // Send payment details fallback (if no payment link)
+  // async sendPaymentDetailsFallback(to, userSession) {
+  //   const summary =
+  //     `📋 Application Summary:\n\n` +
+  //     `👤 Name: ${userSession.data.first_name} ${userSession.data.last_name}\n` +
+  //     `📧 Email: ${userSession.data.email}\n` +
+  //     `📱 Phone: ${userSession.data.phone}\n` +
+  //     `🏢 Business: ${userSession.data.business_name}\n` +
+  //     `📅 Duration: ${userSession.data.business_duration}\n` +
+  //     `💰 Loan Amount: ${userSession.data.loan_amount}\n` +
+  //     `📍 Address: ${userSession.data.address}\n` +
+  //     `🏭 Industry: ${userSession.data.industry}\n\n` +
+  //     `💳 To proceed with your application, please make a payment of ₦${config.payment.amount}.\n\n` +
+  //     `Click the button below to pay securely online, or send your transaction reference if you've already paid:`;
+
+  //   // Create interactive message with payment button
+  //   const interactiveMessage = {
+  //     messaging_product: "whatsapp",
+  //     to,
+  //     type: "interactive",
+  //     interactive: {
+  //       type: "button",
+  //       header: {
+  //         type: "text",
+  //         text: "💳 Payment Required",
+  //       },
+  //       body: {
+  //         text: summary,
+  //       },
+  //       footer: {
+  //         text: "Secure payment powered by Kiya",
+  //       },
+  //       action: {
+  //         buttons: [
+  //           {
+  //             type: "url",
+  //             url: {
+  //               url: paymentLink,
+  //               text: "Pay Now",
+  //             },
+  //           },
+  //         ],
+  //       },
+  //     },
+  //   };
+
+  //   return this.sendMessage(to, summary);
+  // }
 
   // Send completion message
   async sendCompletionMessage(to) {
@@ -118,34 +221,6 @@ class WhatsAppService {
       "Thank you for choosing us! 🙏";
 
     return this.sendMessage(to, message);
-  }
-
-  // Send interactive message (buttons/lists)
-  async sendInteractiveMessage(to, interactiveMessage) {
-    try {
-      const data = {
-        ...interactiveMessage,
-        to,
-      };
-
-      const response = await axios({
-        method: "POST",
-        url: `https://graph.facebook.com/${this.version}/${this.phoneNumberId}/messages`,
-        data,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.accessToken}`,
-        },
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error(
-        "Error sending interactive WhatsApp message:",
-        error.response?.data || error.message
-      );
-      throw error;
-    }
   }
 }
 

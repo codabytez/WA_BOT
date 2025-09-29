@@ -13,7 +13,7 @@ class SessionManager {
   }
 
   // Create new session
-  createSession(phoneNumber, whatsappPhoneNumber = "") {
+  createSession(phoneNumber, whatsappNumber = "") {
     const newSession = {
       state: USER_STATES.INITIAL,
       data: {
@@ -26,13 +26,13 @@ class SessionManager {
         cac_number: "",
         referral: "",
         loan_amount: "",
-        address: "",
+        business_address: "",
         industry: "",
         twitter: "",
         instagram: "",
         facebook: "",
         linkedin: "",
-        whatsapp_phone_number: whatsappPhoneNumber,
+        whatsapp_number: whatsappNumber,
         payment_reference: "",
       },
       step: 0,
@@ -63,12 +63,12 @@ class SessionManager {
   }
 
   // Get or create session
-  getOrCreateSession(phoneNumber, whatsappPhoneNumber = "") {
+  getOrCreateSession(phoneNumber, whatsappNumber = "") {
     let session = this.getSession(phoneNumber);
     if (!session) {
-      session = this.createSession(phoneNumber, whatsappPhoneNumber);
-    } else if (whatsappPhoneNumber && !session.data.whatsapp_phone_number) {
-      session.data.whatsapp_phone_number = whatsappPhoneNumber;
+      session = this.createSession(phoneNumber, whatsappNumber);
+    } else if (whatsappNumber && !session.data.whatsapp_number) {
+      session.data.whatsapp_number = whatsappNumber;
       this.updateSession(phoneNumber, session);
     }
     return session;

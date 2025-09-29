@@ -24,24 +24,26 @@ class WebhookHandler {
 
         // Handle different message types
         let messageText = "";
-        let messageType = "text";
+        let messageType = message.type;
+        let interactiveData = null;
 
         if (message.type === "text") {
           messageText = message.text.body;
-          messageType = "text";
         } else if (message.type === "interactive") {
-          // Handle interactive responses (button clicks, list selections)
-          messageText = message.interactive;
-          messageType = "interactive";
+          // Handle interactive responses (buttons or list selections)
+          if (message.interactive.type === "button_reply") {
+            interactiveData = message.interactive.button_reply;
+            messageText = interactiveData.title;
+          } else if (message.interactive.type === "list_reply") {
+            interactiveData = message.interactive.list_reply;
+            messageText = interactiveData.title;
+          }
         } else if (message.type === "video") {
           messageText = "video_uploaded";
-          messageType = "media";
         } else if (message.type === "document") {
           messageText = "document_uploaded";
-          messageType = "media";
         } else {
-          messageText = message.type;
-          messageType = "other";
+          messageText = message.type; // Handle other types
         }
 
         try {
@@ -50,14 +52,13 @@ class WebhookHandler {
             messageText,
             username,
             whatsappPhoneNumber,
-            messageType
+            messageType,
+            interactiveData
           );
         } catch (error) {
           console.error("Error processing user input:", error);
           // Send error message to user
-          const WhatsAppService = require("../services/whatsappService");
-          const whatsappService = new WhatsAppService();
-          await whatsappService.sendMessage(
+          await this.conversationHandler.whatsappService.sendMessage(
             from,
             "Sorry, I encountered an error processing your request. Please try again or contact support."
           );
