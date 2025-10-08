@@ -52,10 +52,20 @@ class ApiService {
 
   // Submit complete application entry
   async submitEntry(userData: UserData) {
+    // Validate and format phone number
+    let newPhone = userData.phone;
+    if (newPhone.startsWith("+234")) {
+      newPhone = "0" + newPhone.slice(4);
+    }
+    // Basic validation: must be 11 digits and start with '0'
+    if (!/^0\d{10}$/.test(newPhone)) {
+      throw new Error("Invalid phone number format");
+    }
     try {
       const response = await this.client.post("/submit-entry", {
         ...userData,
         loan_amount: 0,
+        phone: newPhone,
         address: userData.business_address,
         amount_in_words: userData.loan_amount,
       });
