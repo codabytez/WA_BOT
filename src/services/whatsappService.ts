@@ -1,7 +1,13 @@
-const axios = require("axios");
-const config = require("../config");
+import axios from "axios";
+import config from "../config";
+import { MessageType, UserSession } from "../types";
+import { AxiosError } from "axios";
 
 class WhatsAppService {
+  version: string | undefined;
+  phoneNumberId: string | undefined;
+  accessToken: string | undefined;
+
   constructor() {
     this.version = config.whatsapp.version;
     this.phoneNumberId = config.whatsapp.phoneNumberId;
@@ -9,7 +15,11 @@ class WhatsAppService {
   }
 
   // Send WhatsApp message
-  async sendMessage(to, message, messageType = "text") {
+  async sendMessage(
+    to: string,
+    message: string | object,
+    messageType: MessageType
+  ) {
     try {
       const data =
         messageType === "text"
@@ -28,16 +38,17 @@ class WhatsAppService {
 
       return response.data;
     } catch (error) {
+      const err = error as AxiosError;
       console.error(
         "Error sending WhatsApp message:",
-        error.response?.data || error.message
+        err.response?.data || err.message
       );
-      throw error;
+      throw err;
     }
   }
 
   // Send interactive message
-  async sendInteractiveMessage(to, interactiveMessage) {
+  async sendInteractiveMessage(interactiveMessage: object) {
     try {
       const response = await axios({
         method: "POST",
@@ -51,16 +62,21 @@ class WhatsAppService {
 
       return response.data;
     } catch (error) {
+      const err = error as AxiosError;
       console.error(
         "Error sending interactive message:",
-        error.response?.data || error.message
+        err.response?.data || err.message
       );
-      throw error;
+      throw err;
     }
   }
 
   // Send welcome message
-  async sendWelcomeMessage(to, username) {
+  async sendWelcomeMessage(
+    to: string,
+    username: string,
+    messageType: MessageType
+  ) {
     const message =
       `🌟 Hello ${username}! Welcome to our Kiya Loan Bot! 🌟\n\n` +
       "I'm here to help you apply for a business loan quickly and easily.\n\n" +
@@ -70,12 +86,12 @@ class WhatsAppService {
       "• Type 'status' to check your progress\n\n" +
       "To get started, please provide your email address:";
 
-    return this.sendMessage(to, message);
+    return this.sendMessage(to, message, messageType);
   }
 
   // Send help menu
-  async sendHelpMenu(to) {
-    const helpMessage =
+  async sendHelpMenu(to: string, messageType: MessageType): Promise<any> {
+    const helpMessage: string =
       "📱 Available Commands:\n\n" +
       "• *start* - Begin new application\n" +
       "• *restart* - Start over from beginning\n" +
@@ -85,36 +101,51 @@ class WhatsAppService {
       "• *status* - Check your current progress\n\n" +
       "You can use these commands at any time during the application process.";
 
-    return this.sendMessage(to, helpMessage);
+    return this.sendMessage(to, helpMessage, messageType);
   }
 
   // Send status message
-  async sendStatusMessage(to, currentStatus, progress, totalFields) {
+  async sendStatusMessage(
+    to: string,
+    currentStatus: string,
+    progress: number,
+    totalFields: number,
+    messageType: MessageType
+  ) {
     const message =
       `📊 Application Status:\n\n` +
       `Current Step: ${currentStatus}\n` +
       `Progress: ${progress}/${totalFields} fields completed\n\n` +
       `Type 'help' for available commands or continue where you left off.`;
 
-    return this.sendMessage(to, message);
+    return this.sendMessage(to, message, messageType);
   }
 
   // Send cancellation message
-  async sendCancellationMessage(to) {
+  async sendCancellationMessage(to: string, messageType: MessageType) {
     const message =
       "❌ Application cancelled successfully.\n\n" +
       "Your progress has been cleared. Don't worry, you can start over anytime!\n\n" +
       "Type 'start' when you're ready to begin a new application. 👍";
 
-    return this.sendMessage(to, message);
+    return this.sendMessage(to, message, messageType);
   }
 
   // Send payment details with interactive button
-  async sendPaymentDetails(to, userSession, paymentLink) {
+  async sendPaymentDetails(
+    to: string,
+    userSession: UserSession,
+    paymentLink: string
+  ) {
     // Helper to format numbers with commas, handles string or number
-    function formatNumber(num) {
-      const n = typeof num === "string" ? Number(num.replace(/,/g, "")) : num;
-      return isNaN(n) ? num : n.toLocaleString("en-NG");
+    function formatNumber(num: string | undefined) {
+      const n =
+        typeof num === "string"
+          ? Number(num.replace(/,/g, ""))
+          : typeof num === "number"
+          ? num
+          : 0;
+      return isNaN(n) ? num ?? "" : n.toLocaleString("en-NG");
     }
 
     const summary =
@@ -124,8 +155,8 @@ class WhatsAppService {
       `📱 Phone: ${userSession.data.phone}\n` +
       `🏢 Business: ${userSession.data.business_name}\n` +
       `📅 Duration: ${userSession.data.business_duration}\n` +
-      `💰 Loan Amount: ₦${formatNumber(userSession.data.loan_amount)}\n` +
-      `📍 Address: ${userSession.data.address}\n` +
+      `💰 Loan Amount: ${formatNumber(userSession.data.loan_amount)}\n` +
+      `📍 Address: ${userSession.data.business_address}\n` +
       `🏭 Industry: ${userSession.data.industry}\n\n` +
       `💳 To proceed with your application, please make a payment of ₦${formatNumber(
         config.payment.amount
@@ -159,60 +190,10 @@ class WhatsAppService {
       },
     };
 
-    return this.sendInteractiveMessage(to, interactiveMessage);
+    return this.sendInteractiveMessage(interactiveMessage);
   }
 
-  // // Send payment details fallback (if no payment link)
-  // async sendPaymentDetailsFallback(to, userSession) {
-  //   const summary =
-  //     `📋 Application Summary:\n\n` +
-  //     `👤 Name: ${userSession.data.first_name} ${userSession.data.last_name}\n` +
-  //     `📧 Email: ${userSession.data.email}\n` +
-  //     `📱 Phone: ${userSession.data.phone}\n` +
-  //     `🏢 Business: ${userSession.data.business_name}\n` +
-  //     `📅 Duration: ${userSession.data.business_duration}\n` +
-  //     `💰 Loan Amount: ${userSession.data.loan_amount}\n` +
-  //     `📍 Address: ${userSession.data.address}\n` +
-  //     `🏭 Industry: ${userSession.data.industry}\n\n` +
-  //     `💳 To proceed with your application, please make a payment of ₦${config.payment.amount}.\n\n` +
-  //     `Click the button below to pay securely online, or send your transaction reference if you've already paid:`;
-
-  //   // Create interactive message with payment button
-  //   const interactiveMessage = {
-  //     messaging_product: "whatsapp",
-  //     to,
-  //     type: "interactive",
-  //     interactive: {
-  //       type: "button",
-  //       header: {
-  //         type: "text",
-  //         text: "💳 Payment Required",
-  //       },
-  //       body: {
-  //         text: summary,
-  //       },
-  //       footer: {
-  //         text: "Secure payment powered by Kiya",
-  //       },
-  //       action: {
-  //         buttons: [
-  //           {
-  //             type: "url",
-  //             url: {
-  //               url: paymentLink,
-  //               text: "Pay Now",
-  //             },
-  //           },
-  //         ],
-  //       },
-  //     },
-  //   };
-
-  //   return this.sendMessage(to, summary);
-  // }
-
-  // Send completion message
-  async sendCompletionMessage(to) {
+  async sendCompletionMessage(to: string, messageType: MessageType) {
     const message =
       "🎉 Congratulations! Your loan application has been submitted successfully!\n\n" +
       "📧 You'll receive a confirmation email shortly.\n" +
@@ -220,8 +201,8 @@ class WhatsAppService {
       "📞 Our team will contact you if additional information is needed.\n\n" +
       "Thank you for choosing us! 🙏";
 
-    return this.sendMessage(to, message);
+    return this.sendMessage(to, message, messageType);
   }
 }
 
-module.exports = WhatsAppService;
+export default WhatsAppService;

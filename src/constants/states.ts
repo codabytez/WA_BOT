@@ -1,5 +1,5 @@
 // User states for conversation flow
-const USER_STATES = {
+export const USER_STATES = {
   INITIAL: "initial",
   AWAITING_EMAIL: "awaiting_email",
   AWAITING_OTP: "awaiting_otp",
@@ -18,9 +18,11 @@ const USER_STATES = {
   PAYMENT_PENDING: "payment_pending",
   AWAITING_PITCH_VIDEO: "awaiting_pitch_video",
   COMPLETED: "completed",
-};
+} as const;
 
-const STATUS_MAP = {
+export type UserState = (typeof USER_STATES)[keyof typeof USER_STATES];
+
+export const STATUS_MAP: Record<UserState, string> = {
   [USER_STATES.INITIAL]: "Not started",
   [USER_STATES.AWAITING_EMAIL]: "Waiting for email address",
   [USER_STATES.AWAITING_OTP]: "Waiting for email verification",

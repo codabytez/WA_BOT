@@ -1,12 +1,19 @@
-const ConversationHandler = require("./conversionHandler");
+import SessionManager from "../services/sessionManager";
+import { MessageType } from "../types";
+import ConversationHandler from "./conversionHandler";
 
 class WebhookHandler {
-  constructor(sessionManager) {
+  conversationHandler: ConversationHandler;
+
+  constructor(sessionManager: SessionManager) {
     this.conversationHandler = new ConversationHandler(sessionManager);
   }
 
   // Handle incoming webhook events
-  async handleWebhook(req, res) {
+  async handleWebhook(
+    req: import("express").Request,
+    res: import("express").Response
+  ) {
     const body = req.body;
 
     if (body.object) {
@@ -15,16 +22,21 @@ class WebhookHandler {
         body.entry[0].changes &&
         body.entry[0].changes[0].value.messages
       ) {
-        const from = body.entry[0].changes[0].value.messages[0].from;
+        const from = body.entry[0].changes[0].value.messages[0].from as string;
         const message = body.entry[0].changes[0].value.messages[0];
-        const username =
-          body.entry[0].changes[0].value.contacts[0].profile.name;
-        const whatsappPhoneNumber =
-          body.entry[0].changes[0].value.contacts[0].wa_id;
+        const username = body.entry[0].changes[0].value.contacts[0].profile
+          .name as string;
+        const whatsappPhoneNumber = body.entry[0].changes[0].value.contacts[0]
+          .wa_id as string;
+        const media_id: string =
+          message?.image?.id ||
+          message?.video?.id ||
+          message?.document?.id ||
+          null;
 
         // Handle different message types
         let messageText = "";
-        let messageType = message.type;
+        let messageType = message.type as MessageType;
         let interactiveData = null;
 
         if (message.type === "text") {
@@ -33,10 +45,10 @@ class WebhookHandler {
           // Handle interactive responses (buttons or list selections)
           if (message.interactive.type === "button_reply") {
             interactiveData = message.interactive.button_reply;
-            messageText = interactiveData.title;
+            // messageText = interactiveData.title;
           } else if (message.interactive.type === "list_reply") {
             interactiveData = message.interactive.list_reply;
-            messageText = interactiveData.title;
+            // messageText = interactiveData.title;
           }
         } else if (message.type === "video") {
           messageText = "video_uploaded";
@@ -53,14 +65,16 @@ class WebhookHandler {
             username,
             whatsappPhoneNumber,
             messageType,
-            interactiveData
+            interactiveData,
+            media_id
           );
         } catch (error) {
           console.error("Error processing user input:", error);
           // Send error message to user
           await this.conversationHandler.whatsappService.sendMessage(
             from,
-            "Sorry, I encountered an error processing your request. Please try again or contact support."
+            "Sorry, I encountered an error processing your request. Please try again or contact support.",
+            messageType
           );
         }
       }
@@ -71,7 +85,10 @@ class WebhookHandler {
   }
 
   // Handle webhook verification
-  handleWebhookVerification(req, res) {
+  handleWebhookVerification(
+    req: import("express").Request,
+    res: import("express").Response
+  ) {
     const mode = req.query["hub.mode"];
     const challenge = req.query["hub.challenge"];
     const token = req.query["hub.verify_token"];
@@ -88,4 +105,4 @@ class WebhookHandler {
   }
 }
 
-module.exports = WebhookHandler;
+export default WebhookHandler;

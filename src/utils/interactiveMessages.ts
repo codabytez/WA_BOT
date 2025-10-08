@@ -34,7 +34,7 @@ const LOAN_AMOUNT_OPTIONS = [
 ];
 
 // Create industry selection message
-function createIndustrySelectionMessage(to) {
+function createIndustrySelectionMessage(to: string) {
   // Split industries into two sections for better UX
   const businessServices = INDUSTRIES.slice(0, 9);
   const otherIndustries = INDUSTRIES.slice(9);
@@ -79,7 +79,7 @@ function createIndustrySelectionMessage(to) {
 }
 
 // Create business duration selection message
-function createBusinessDurationSelectionMessage(to) {
+function createBusinessDurationSelectionMessage(to: string) {
   return {
     messaging_product: "whatsapp",
     to,
@@ -113,7 +113,7 @@ function createBusinessDurationSelectionMessage(to) {
 }
 
 // Create loan amount selection message
-function createLoanAmountSelectionMessage(to) {
+function createLoanAmountSelectionMessage(to: string) {
   // Split into smaller and larger amounts
   const smallerAmounts = LOAN_AMOUNT_OPTIONS.slice(0, 4);
   const largerAmounts = LOAN_AMOUNT_OPTIONS.slice(4);
@@ -158,35 +158,35 @@ function createLoanAmountSelectionMessage(to) {
 }
 
 // Helper functions to get display values
-function getIndustryDisplayName(industryId) {
+function getIndustryDisplayName(industryId: string) {
   const industry = INDUSTRIES.find((i) => i.id === industryId);
   return industry ? industry.title : industryId;
 }
 
-function getBusinessDurationDisplayName(durationId) {
+function getBusinessDurationDisplayName(durationId: string) {
   const duration = BUSINESS_DURATION_OPTIONS.find((d) => d.id === durationId);
   return duration ? duration.title : durationId;
 }
 
-function getLoanAmountDisplayName(amountId) {
+function getLoanAmountDisplayName(amountId: string) {
   const amount = LOAN_AMOUNT_OPTIONS.find((a) => a.id === amountId);
   return amount ? amount.title : amountId;
 }
 
 // Check if a value is a valid option ID
-function isValidIndustryId(id) {
+function isValidIndustryId(id: string) {
   return INDUSTRIES.some((industry) => industry.id === id);
 }
 
-function isValidBusinessDurationId(id) {
+function isValidBusinessDurationId(id: string) {
   return BUSINESS_DURATION_OPTIONS.some((duration) => duration.id === id);
 }
 
-function isValidLoanAmountId(id) {
+function isValidLoanAmountId(id: string) {
   return LOAN_AMOUNT_OPTIONS.some((amount) => amount.id === id);
 }
 
-module.exports = {
+export {
   INDUSTRIES,
   BUSINESS_DURATION_OPTIONS,
   LOAN_AMOUNT_OPTIONS,

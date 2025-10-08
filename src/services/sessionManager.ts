@@ -1,6 +1,9 @@
-const { USER_STATES } = require("../constants/states");
+import { USER_STATES } from "../constants/states";
+import { otpStorage, UserSession } from "../types";
 
 class SessionManager {
+  userSessions: Map<string, UserSession>;
+  otpStorage: Map<string, otpStorage>;
   constructor() {
     // In-memory storage for user sessions (use Redis/Database in production)
     this.userSessions = new Map();
@@ -8,13 +11,13 @@ class SessionManager {
   }
 
   // Get user session
-  getSession(phoneNumber) {
+  getSession(phoneNumber: string) {
     return this.userSessions.get(phoneNumber);
   }
 
   // Create new session
-  createSession(phoneNumber, whatsappNumber = "") {
-    const newSession = {
+  createSession(phoneNumber: string, whatsappNumber: string) {
+    const newSession: UserSession = {
       state: USER_STATES.INITIAL,
       data: {
         email: "",
@@ -44,7 +47,7 @@ class SessionManager {
   }
 
   // Update session
-  updateSession(phoneNumber, updates) {
+  updateSession(phoneNumber: string, updates: UserSession) {
     const session = this.userSessions.get(phoneNumber);
     if (session) {
       Object.assign(session, updates);
@@ -54,7 +57,7 @@ class SessionManager {
   }
 
   // Delete session
-  deleteSession(phoneNumber) {
+  deleteSession(phoneNumber: string) {
     const session = this.userSessions.get(phoneNumber);
     if (session && session.data.email) {
       this.otpStorage.delete(session.data.email);
@@ -63,7 +66,7 @@ class SessionManager {
   }
 
   // Get or create session
-  getOrCreateSession(phoneNumber, whatsappNumber = "") {
+  getOrCreateSession(phoneNumber: string, whatsappNumber = "") {
     let session = this.getSession(phoneNumber);
     if (!session) {
       session = this.createSession(phoneNumber, whatsappNumber);
@@ -75,7 +78,7 @@ class SessionManager {
   }
 
   // Store OTP
-  storeOTP(email, otp) {
+  storeOTP(email: string, otp: any) {
     this.otpStorage.set(email, {
       otp,
       timestamp: Date.now(),
@@ -102,7 +105,11 @@ class SessionManager {
   // Get session statistics
   getStats() {
     const sessions = Array.from(this.userSessions.values());
-    const stats = {
+    const stats: {
+      total: number;
+      byState: { [key: string]: number };
+      completed: number;
+    } = {
       total: sessions.length,
       byState: {},
       completed: 0,
@@ -119,4 +126,4 @@ class SessionManager {
   }
 }
 
-module.exports = SessionManager;
+export default SessionManager;

@@ -15,13 +15,10 @@ const config = {
   },
   payment: {
     amount: process.env.PAYMENT_AMOUNT,
-    bank: process.env.PAYMENT_BANK,
-    account: process.env.PAYMENT_ACCOUNT,
-    accountName: process.env.PAYMENT_ACCOUNT_NAME,
   },
   support: {
     email: process.env.SUPPORT_EMAIL,
   },
 };
 
-module.exports = config;
+export default config;

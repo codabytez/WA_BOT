@@ -1,13 +1,14 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const config = require("./src/config");
+import express from "express";
+import bodyParser from "body-parser";
+import config from "./src/config";
 
 // Import services and handlers
-const SessionManager = require("./src/services/sessionManager");
-const WebhookHandler = require("./src/handlers/webhookHandler");
-const ConversationHandler = require("./src/handlers/conversionHandler");
-const createAdminRoutes = require("./src/routes/adminRoutes");
-const createPaymentRoutes = require("./src/routes/paymentRoutes");
+import SessionManager from "./src/services/sessionManager";
+import WebhookHandler from "./src/handlers/webhookHandler";
+import ConversationHandler from "./src/handlers/conversionHandler";
+import createAdminRoutes from "./src/routes/adminRoutes";
+import createPaymentRoutes from "./src/routes/paymentRoutes";
+import { Response } from "express";
 
 // Initialize services
 const sessionManager = new SessionManager();
@@ -19,7 +20,7 @@ const app = express();
 app.use(bodyParser.json());
 
 // Root endpoint
-app.get("/", (req, res) => {
+app.get("/", (_, res) => {
   res.status(200).json({
     message: "Welcome to the Kiya Loan Bot Server!",
     status: "running",
@@ -52,7 +53,7 @@ app.use("/admin", createAdminRoutes(sessionManager));
 app.use("/payment", createPaymentRoutes(sessionManager, conversationHandler));
 
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get("/health", (_, res) => {
   res.status(200).json({
     status: "healthy",
     timestamp: new Date().toISOString(),
@@ -63,7 +64,13 @@ app.get("/health", (req, res) => {
 });
 
 // Error handling middleware
-app.use((error, req, res, next) => {
+interface ErrorResponse {
+  success: boolean;
+  message: string;
+  error: string;
+}
+
+app.use((error: Error, _: any, res: Response<ErrorResponse>) => {
   console.error("Unhandled error:", error);
   res.status(500).json({
     success: false,
@@ -104,4 +111,4 @@ app.listen(PORT, () => {
   console.log(`💚 Health Check: http://localhost:${PORT}/health`);
 });
 
-module.exports = app;
+export default app;

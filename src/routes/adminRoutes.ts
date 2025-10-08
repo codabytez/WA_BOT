@@ -1,10 +1,12 @@
-const express = require("express");
+import express from "express";
+import SessionManager from "../services/sessionManager";
+import { AxiosError } from "axios";
 const router = express.Router();
 
 // Admin routes factory
-function createAdminRoutes(sessionManager) {
+function createAdminRoutes(sessionManager: SessionManager) {
   // Get all user sessions
-  router.get("/sessions", (req, res) => {
+  router.get("/sessions", (_, res) => {
     try {
       const sessions = sessionManager.getAllSessions();
       res.json({
@@ -13,17 +15,18 @@ function createAdminRoutes(sessionManager) {
         total: sessions.length,
       });
     } catch (error) {
-      console.error("Error fetching sessions:", error);
+      const err = error as AxiosError;
+      console.error("Error fetching sessions:", err);
       res.status(500).json({
         success: false,
         message: "Error fetching sessions",
-        error: error.message,
+        error: err.message,
       });
     }
   });
 
   // Get session statistics
-  router.get("/stats", (req, res) => {
+  router.get("/stats", (_, res) => {
     try {
       const stats = sessionManager.getStats();
       res.json({
@@ -31,17 +34,18 @@ function createAdminRoutes(sessionManager) {
         data: stats,
       });
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      const err = error as AxiosError;
+      console.error("Error fetching stats:", err);
       res.status(500).json({
         success: false,
         message: "Error fetching statistics",
-        error: error.message,
+        error: err.message,
       });
     }
   });
 
   // Clear all sessions
-  router.post("/clear-sessions", (req, res) => {
+  router.post("/clear-sessions", (_, res) => {
     try {
       sessionManager.clearAllSessions();
       res.json({
@@ -49,11 +53,12 @@ function createAdminRoutes(sessionManager) {
         message: "All sessions cleared successfully",
       });
     } catch (error) {
-      console.error("Error clearing sessions:", error);
+      const err = error as AxiosError;
+      console.error("Error clearing sessions:", err);
       res.status(500).json({
         success: false,
         message: "Error clearing sessions",
-        error: error.message,
+        error: err.message,
       });
     }
   });
@@ -71,7 +76,7 @@ function createAdminRoutes(sessionManager) {
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           phone: phoneNumber,
@@ -79,11 +84,12 @@ function createAdminRoutes(sessionManager) {
         },
       });
     } catch (error) {
-      console.error("Error fetching session:", error);
-      res.status(500).json({
+      const err = error as AxiosError;
+      console.error("Error fetching session:", err);
+      return res.status(500).json({
         success: false,
         message: "Error fetching session",
-        error: error.message,
+        error: err.message,
       });
     }
   });
@@ -95,27 +101,31 @@ function createAdminRoutes(sessionManager) {
       const deleted = sessionManager.deleteSession(phoneNumber);
 
       if (!deleted) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: "Session not found",
         });
+        return;
       }
 
       res.json({
         success: true,
         message: "Session deleted successfully",
       });
+      return;
     } catch (error) {
-      console.error("Error deleting session:", error);
+      const err = error as AxiosError;
+      console.error("Error deleting session:", err);
       res.status(500).json({
         success: false,
         message: "Error deleting session",
-        error: error.message,
+        error: err.message,
       });
+      return;
     }
   });
 
   return router;
 }
 
-module.exports = createAdminRoutes;
+export default createAdminRoutes;
