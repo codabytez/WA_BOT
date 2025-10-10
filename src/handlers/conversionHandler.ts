@@ -345,6 +345,8 @@ class ConversationHandler {
     }
   }
 
+  // Add this method to your ConversationHandler class
+
   async handleEmailState(
     from: string,
     message: string,
@@ -380,18 +382,29 @@ class ConversationHandler {
       }
     } catch (error) {
       const err = error as AxiosError;
+
       if (err.response?.status === 409) {
-        // Already verified → skip OTP
+        // Email already exists - determine where to route user
+        const existingData = (err.response?.data as any)?.data;
+
+        if (!existingData) {
+          await this.whatsappService.sendMessage(
+            from,
+            "❌ Could not retrieve your existing data. Please contact support.",
+            "text"
+          );
+          return;
+        }
+
+        // Store email in session
         userSession.data.email = message;
-        await this.whatsappService.sendMessage(
+
+        // Route based on existing data
+        await this.routeUserBasedOnExistingData(
           from,
-          "✅ This email is already verified!\n\n" +
-            "Let's continue your application.\n\n" +
-            "What's your first name?",
-          "text"
+          userSession,
+          existingData
         );
-        userSession.state = USER_STATES.AWAITING_FIRST_NAME;
-        this.sessionManager.updateSession(from, userSession);
       } else {
         const errorMsg =
           (err?.response?.data as { message?: string })?.message ||
@@ -399,6 +412,184 @@ class ConversationHandler {
         await this.whatsappService.sendMessage(from, errorMsg, "text");
       }
     }
+  }
+
+  // New method to handle routing based on existing data
+  async routeUserBasedOnExistingData(
+    from: string,
+    userSession: UserSession,
+    existingData: any
+  ) {
+    // Check 1: Email not verified
+    if (!existingData.email_verified_at) {
+      await this.whatsappService.sendMessage(
+        from,
+        "✅ Email found but not verified!\n\n" +
+          "I've sent a verification code to your email.\n\n" +
+          "Please enter the 6-digit OTP you received:",
+        "text"
+      );
+      userSession.state = USER_STATES.AWAITING_OTP;
+      this.sessionManager.updateSession(from, userSession);
+      return;
+    }
+
+    // Check 2: Missing basic personal info (first_name, last_name, business_name)
+    if (
+      !existingData.first_name ||
+      !existingData.last_name ||
+      !existingData.business_name
+    ) {
+      await this.whatsappService.sendMessage(
+        from,
+        "✅ Welcome back! Your email is verified.\n\n" +
+          "Let's continue your application.\n\n" +
+          "What's your first name?",
+        "text"
+      );
+
+      // Pre-fill any existing data
+      if (existingData.first_name)
+        userSession.data.first_name = existingData.first_name;
+      if (existingData.last_name)
+        userSession.data.last_name = existingData.last_name;
+      if (existingData.phone) userSession.data.phone = existingData.phone;
+      if (existingData.business_name)
+        userSession.data.business_name = existingData.business_name;
+
+      userSession.state = USER_STATES.AWAITING_FIRST_NAME;
+      this.sessionManager.updateSession(from, userSession);
+      return;
+    }
+
+    // Check 3: All info filled but payment not made (paid = 0)
+    if (existingData.paid === 0) {
+      // Pre-fill all existing data
+      this.prefillUserSessionData(userSession, existingData);
+
+      try {
+        // Generate payment link
+        const paymentResponse = await this.apiService.getPaymentLink(
+          existingData.email
+        );
+
+        if (paymentResponse?.status && paymentResponse?.data?.payment_link) {
+          await this.whatsappService.sendMessage(
+            from,
+            "✅ Welcome back! Your application details are saved.\n\n" +
+              "You need to complete your payment to proceed.\n\n" +
+              "Click the link below to make payment:",
+            "text"
+          );
+
+          await this.whatsappService.sendPaymentDetails(
+            from,
+            userSession,
+            paymentResponse?.data?.payment_link
+          );
+
+          userSession.state = USER_STATES.AWAITING_PAYMENT;
+          this.sessionManager.updateSession(from, userSession);
+        } else {
+          await this.whatsappService.sendMessage(
+            from,
+            "❌ Could not generate payment link. Please try again later or contact support.",
+            "text"
+          );
+        }
+      } catch (paymentError) {
+        console.error("Payment link error:", paymentError);
+        await this.whatsappService.sendMessage(
+          from,
+          "❌ Could not generate payment link. Please try again later or contact support.",
+          "text"
+        );
+      }
+      return;
+    }
+
+    // Check 4: Payment made but no pitch video (whatsapp_media_id is null)
+    if (existingData.paid === 1 && !existingData.whatsapp_media_id) {
+      // Pre-fill all existing data
+      this.prefillUserSessionData(userSession, existingData);
+
+      await this.whatsappService.sendMessage(
+        from,
+        "✅ Welcome back! Your application has been submitted and payment received.\n\n" +
+          "📹 Final Step: Upload Your Pitch Video\n\n" +
+          "Please send your pitch video directly in this chat. Make sure it clearly explains:\n" +
+          "• Your business and what you do\n" +
+          "• Why you need the loan\n" +
+          "• How you plan to use the funds\n\n" +
+          "You can send the video now! 🎥",
+        "text"
+      );
+
+      userSession.state = USER_STATES.AWAITING_PITCH_VIDEO;
+      this.sessionManager.updateSession(from, userSession);
+      return;
+    }
+
+    // Check 5: Everything complete
+    if (existingData.paid === 1 && existingData.whatsapp_media_id) {
+      await this.whatsappService.sendMessage(
+        from,
+        "✅ Your application is already complete!\n\n" +
+          "Our team will review your application and get back to you soon.\n\n" +
+          "If you need any assistance, feel free to contact support at helpdesk@kiakia.co.\n\n" +
+          "Type 'help' for available commands.",
+        "text"
+      );
+
+      userSession.state = USER_STATES.COMPLETED;
+      this.sessionManager.updateSession(from, userSession);
+      return;
+    }
+
+    // Fallback - shouldn't reach here
+    await this.whatsappService.sendMessage(
+      from,
+      "✅ Welcome back! Let's continue your application.\n\n" +
+        "What's your first name?",
+      "text"
+    );
+    userSession.state = USER_STATES.AWAITING_FIRST_NAME;
+    this.sessionManager.updateSession(from, userSession);
+  }
+
+  // Helper method to prefill user session data from API response
+  private prefillUserSessionData(userSession: UserSession, existingData: any) {
+    if (existingData.first_name)
+      userSession.data.first_name = existingData.first_name;
+    if (existingData.last_name)
+      userSession.data.last_name = existingData.last_name;
+    if (existingData.phone) userSession.data.phone = existingData.phone;
+    if (existingData.business_name)
+      userSession.data.business_name = existingData.business_name;
+    if (existingData.business_duration)
+      userSession.data.business_duration = existingData.business_duration;
+    if (existingData.cac_number)
+      userSession.data.cac_number = existingData.cac_number;
+    if (existingData.loan_amount)
+      userSession.data.loan_amount = existingData.loan_amount;
+    if (existingData.amount_in_words)
+      userSession.data.loan_amount = existingData.amount_in_words;
+    if (existingData.business_address)
+      userSession.data.business_address = existingData.business_address;
+    if (existingData.industry)
+      userSession.data.industry = existingData.industry;
+    if (existingData.twitter) userSession.data.twitter = existingData.twitter;
+    if (existingData.instagram)
+      userSession.data.instagram = existingData.instagram;
+    if (existingData.facebook)
+      userSession.data.facebook = existingData.facebook;
+    if (existingData.linkedin)
+      userSession.data.linkedin = existingData.linkedin;
+    if (existingData.referral)
+      userSession.data.referral = existingData.referral;
+    if (existingData.payment_reference)
+      userSession.data.payment_reference = existingData.payment_reference;
+    if (existingData.paid === 1) userSession.data.payment_status = "confirmed";
   }
 
   async handleOTPState(

@@ -24,10 +24,11 @@ class ApiService {
       return response.data;
     } catch (error) {
       const err = error as AxiosError;
-      console.error(
-        "Email submission error:",
-        err.response?.data || err.message
-      );
+      // console.error(
+      //   "Email submission error:",
+      //   err.response?.data || err.message
+      // );
+      console.error("Email submission error:", err.response);
       throw err;
     }
   }
@@ -69,7 +70,7 @@ class ApiService {
         address: userData.business_address,
         amount_in_words: userData.loan_amount,
       });
-      console.log("Entry submission response:", response);
+      console.log("Entry submission response:", response.data);
       return response;
     } catch (error) {
       const err = error as AxiosError;

@@ -161,7 +161,7 @@ class WhatsAppService {
       `💳 To proceed with your application, please make a payment of ₦${formatNumber(
         config.payment.amount
       )}.\n\n` +
-      `Click the button below to pay securely online, or send your transaction reference if you've already paid:`;
+      `Click the button below to pay securely online. You'll receive an automatic message with payment update.`;
 
     // Create interactive message with payment button
     const interactiveMessage = {
